@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: webhook-server-client
-  namespace: prognose
+  namespace: default
   labels:
     app: webhook-server-client
 spec:
@@ -18,7 +18,7 @@ spec:
       serviceAccountName: webhook-server-client-sa
       containers:
       - name: webhook-server-client
-        image: docker.io/g420/polito-server-webhook-client:0.0.1
+        image: docker.io/michelesgrillo/polito-server-webhook-client:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-REGISTRY="docker.io/g420"  # Change this to your Docker Hub username or registry
+REGISTRY="docker.io/michelesgrillo" # Change this to your Docker Hub username or registry
 IMAGE_NAME=polito-server-webhook-client
 
 # Colors for output

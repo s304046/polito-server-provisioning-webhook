@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: webhook-server-client-sa
-  namespace: prognose
+  namespace: default
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
@@ -28,7 +28,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: webhook-client-binding
-  namespace: prognose
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -36,7 +36,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: webhook-server-client-sa
-  namespace: prognose
+  namespace: default
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
@@ -50,4 +50,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: webhook-server-client-sa
-  namespace: prognose
+  namespace: default
