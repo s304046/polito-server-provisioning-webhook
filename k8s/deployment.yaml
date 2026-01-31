@@ -18,7 +18,7 @@ spec:
       serviceAccountName: webhook-server-client-sa
       containers:
       - name: webhook-server-client
-        image: docker.io/michelesgrillo/polito-server-webhook-client:latest
+        image: docker.io/michelesgrillo/polito-server-webhook-client:v2
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

@@ -8,7 +8,7 @@ import asyncio
 import base64
 import threading
 import time
-from typing import Optional, List, Union
+from typing import Optional
 
 import yaml
 from kubernetes import client, watch
@@ -52,27 +52,24 @@ class UserDataSecretManager:
     def __init__(self, api_client: Optional[client.CoreV1Api] = None):
         self.api = api_client or client.CoreV1Api()
     
-    def _generate_cloud_config(self, ssh_keys: Union[str, List[str]]) -> str:
+    def _generate_cloud_config(self, ssh_key: str) -> str:
         """
-        Generate cloud-config YAML with the provided SSH key(s).
+        Generate cloud-config YAML with the provided SSH key.
         
         Args:
-            ssh_keys: SSH public key (string) or list of keys to include
+            ssh_key: SSH public key to include in the cloud-config
             
         Returns:
             Cloud-config as YAML string
         """
-        # Ensure we always work with a list
-        keys_list = [ssh_keys] if isinstance(ssh_keys, str) else ssh_keys
-
         cloud_config = CLOUD_CONFIG_TEMPLATE.copy()
         # Ensure users list is deep copied if further modifications are needed that could affect the template
         cloud_config["users"] = [user.copy() for user in CLOUD_CONFIG_TEMPLATE["users"]]
 
-        # Find the "prognose" and add the ssh_keys
+        # Find the "prognose" and add the ssh_key
         for user in cloud_config["users"]:
             if user["name"] == "prognose":
-                user["ssh_authorized_keys"] = keys_list
+                user["ssh_authorized_keys"] = [ssh_key]
                 break
         
         return "#cloud-config\n" + yaml.dump(cloud_config, default_flow_style=False)
@@ -111,13 +108,13 @@ class UserDataSecretManager:
             data={"userData": cloud_config_b64}
         )
     
-    def create_or_update(self, bmh_name: str, ssh_keys: Union[str, List[str]]) -> bool:
+    def create_or_update(self, bmh_name: str, ssh_key: str) -> bool:
         """
         Create or update a user data secret for the BareMetalHost.
         
         Args:
             bmh_name: Name of the BareMetalHost
-            ssh_keys: SSH public key(s) to include
+            ssh_key: SSH public key to include
             
         Returns:
             True if successful, False otherwise
@@ -126,7 +123,7 @@ class UserDataSecretManager:
         
         try:
             # Generate and encode cloud-config
-            cloud_config = self._generate_cloud_config(ssh_keys)
+            cloud_config = self._generate_cloud_config(ssh_key)
             cloud_config_b64 = self._encode_cloud_config(cloud_config)
             
             # Create secret object
@@ -261,7 +258,7 @@ class BareMetalHostManager:
         self, 
         bmh_name: str, 
         image_url: str, 
-        ssh_keys: Optional[Union[str, List[str]]] = None,
+        ssh_key: Optional[str] = None,
         checksum: Optional[str] = None, 
         checksum_type: Optional[str] = None,
         wait_for_completion: bool = False,
@@ -276,7 +273,7 @@ class BareMetalHostManager:
         Args:
             bmh_name: Name of the BareMetalHost
             image_url: URL of the image to provision
-            ssh_keys: SSH public key(s) for user access
+            ssh_key: SSH public key for user access
             checksum: Image checksum
             checksum_type: Type of checksum
             wait_for_completion: Not used, kept for API compatibility
@@ -288,9 +285,9 @@ class BareMetalHostManager:
         Returns:
             True if provisioning initiated successfully, False otherwise
         """
-        # Create or update user data secret if SSH keys are provided
-        if ssh_keys:
-            if not self.secret_manager.create_or_update(bmh_name, ssh_keys):
+        # Create or update user data secret if SSH key is provided
+        if ssh_key:
+            if not self.secret_manager.create_or_update(bmh_name, ssh_key):
                 logger.error(f"Failed to create userdata secret for BareMetalHost '{bmh_name}'. Aborting provision.")
                 return False
         
@@ -588,7 +585,7 @@ _provisioning_monitor = ProvisioningMonitor(_bmh_manager)
 def patch_baremetalhost(
     bmh_name: str, 
     image_url: Optional[str] = None, 
-    ssh_keys: Optional[Union[str, List[str]]] = None, # Changed arg name from ssh_key to ssh_keys
+    ssh_key: Optional[str] = None, 
     checksum: Optional[str] = None, 
     checksum_type: Optional[str] = None,
     wait_for_completion: bool = False,
@@ -605,7 +602,7 @@ def patch_baremetalhost(
     Args:
         bmh_name: Name of the BareMetalHost
         image_url: URL of the image to provision (None for deprovisioning)
-        ssh_keys: SSH public key(s) for user access
+        ssh_key: SSH public key for user access
         checksum: Image checksum
         checksum_type: Type of checksum
         wait_for_completion: Whether to wait for provisioning to complete
@@ -619,7 +616,7 @@ def patch_baremetalhost(
     """
     if image_url:
         return _bmh_manager.provision(
-            bmh_name, image_url, ssh_keys, checksum, checksum_type, 
+            bmh_name, image_url, ssh_key, checksum, checksum_type, 
             wait_for_completion, webhook_id, user_id, event_id, timeout
         )
     else:
@@ -627,4 +624,4 @@ def patch_baremetalhost(
 
 
 # Legacy function alias for backward compatibility
-create_userdata_secret = lambda bmh_name, ssh_keys: _bmh_manager.secret_manager.create_or_update(bmh_name, ssh_keys)
+create_userdata_secret = lambda bmh_name, ssh_key: _bmh_manager.secret_manager.create_or_update(bmh_name, ssh_key)

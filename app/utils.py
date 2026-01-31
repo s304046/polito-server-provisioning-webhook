@@ -2,12 +2,12 @@
 Utility functions for webhook payload processing.
 
 This module provides helper functions for safely parsing and handling
-custom parameters from webhook payloads.
+custom parameters from webhook payloads and coordinating server provisioning.
 """
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, Tuple, List
 
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -150,25 +150,61 @@ def create_success_response(action: str, resource_name: str, user_id: Optional[s
     })
 
 
+def get_image_details(os_slug: Optional[str]) -> Tuple[str, str, str]:
+    """
+    Retrieves the image URL, checksum, and checksum type for a given OS slug.
+    If no slug is provided or found, falls back to the default image.
+    """
+    # Fallback to default if no slug provided
+    if not os_slug:
+        return config.PROVISION_IMAGE, config.PROVISION_CHECKSUM, config.PROVISION_CHECKSUM_TYPE
+
+    slug = os_slug.lower()
+    
+    # Retrieve from config dictionary (see config.py update)
+    image_url = config.OS_IMAGES.get(slug, config.PROVISION_IMAGE)
+    checksum = config.OS_CHECKSUMS.get(slug, config.PROVISION_CHECKSUM)
+    checksum_type = config.PROVISION_CHECKSUM_TYPE
+
+    logger.info(f"Selected image for OS '{os_slug}': {image_url}")
+    return image_url, checksum, checksum_type
+
+
 def handle_provision_event(
     payload: models.WebhookPayload,
     raw_payload: bytes
 ) -> bool:
     """
     Handle provisioning event for a single server resource. Returns True on success.
+    Supports Multi-OS selection and Multiple SSH Keys.
     """
     resource_name = payload.resource_name
     event_id = payload.event_id
-    webhook_id = payload.webhook_id
+    webhook_id = str(payload.webhook_id)  # Ensure string for logging functions
     user_id = payload.user_id or "unknown"
 
     try:
+        # 1. Determine Image URL based on OS selection
+        image_url, checksum, checksum_type = get_image_details(payload.operating_system)
+
+        # 2. Handle SSH Keys (List vs Single Legacy Key)
+        ssh_keys_list = payload.ssh_keys if payload.ssh_keys else []
+        
+        # Fallback: if list is empty but legacy key exists, use it
+        if not ssh_keys_list and payload.ssh_public_key:
+            logger.info("No 'sshKeys' list found. Falling back to legacy 'sshPublicKey'.")
+            ssh_keys_list = [payload.ssh_public_key]
+            
+        if not ssh_keys_list:
+            logger.warning(f"No SSH keys provided for {resource_name}. Access might be restricted.")
+
+        # 3. Call Kubernetes Service
         success = kubernetes.patch_baremetalhost(
             bmh_name=resource_name,
-            image_url=config.PROVISION_IMAGE,
-            ssh_key=payload.ssh_public_key,
-            checksum=config.PROVISION_CHECKSUM,
-            checksum_type=config.PROVISION_CHECKSUM_TYPE,
+            image_url=image_url,
+            ssh_keys=ssh_keys_list,  # Pass list to updated kubernetes module
+            checksum=checksum,
+            checksum_type=checksum_type,
             wait_for_completion=False,
             webhook_id=webhook_id,
             user_id=user_id,
@@ -178,19 +214,20 @@ def handle_provision_event(
         
         if success:
             # Send webhook log for successful initiation
+            os_msg = f" (OS: {payload.operating_system})" if payload.operating_system else ""
             if not notification.send_webhook_log(
                 webhook_id=webhook_id,
                 event_type=EVENT_START,
                 success=True,
                 payload_data=json.dumps(payload.model_dump()),
                 status_code=200,
-                response=f"Provisioning initiated for server '{resource_name}'",
+                response=f"Provisioning initiated for server '{resource_name}'{os_msg}",
                 retry_count=0,
                 metadata={"resourceName": resource_name, "userId": user_id, "eventId": event_id}
             ):
                 logger.warning(f"Failed to send webhook log for server '{resource_name}'")
         
-            logger.info(f"[{EVENT_START}] Successfully initiated provisioning for server '{resource_name}' (Event ID: {event_id}). Monitoring in background.")
+            logger.info(f"[{EVENT_START}] Successfully initiated provisioning for server '{resource_name}'{os_msg} (Event ID: {event_id}). Monitoring in background.")
             return True
         else:
             logger.error(f"[{EVENT_START}] Failed to start provisioning for server '{resource_name}' (Event ID: {event_id}).")
@@ -211,7 +248,7 @@ def handle_deprovision_event(
     if isinstance(payload, models.WebhookPayload):
         resource_name = payload.resource_name
         event_id = payload.event_id
-        webhook_id = payload.webhook_id
+        webhook_id = str(payload.webhook_id)
         user_id = payload.user_id
     elif isinstance(payload, models.EventWebhookPayload):
         resource_name = payload.data.resource.name

@@ -9,10 +9,11 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
+
 class WebhookPayload(BaseModel):
     """
     Model for webhook event payload.
-    Handles a single Server event.
+    Handles a single Server event with multi-OS and multi-SSH key support.
     """
     event_type: str = Field(..., alias='eventType', description="Type of the event (EVENT_START, EVENT_END)")
     timestamp: str = Field(..., description="Timestamp when the event occurred")
@@ -21,7 +22,15 @@ class WebhookPayload(BaseModel):
     user_id: Optional[str] = Field(None, alias='userId', description="ID of the user associated with the event")
     username: Optional[str] = Field(None, description="Username of the user")
     email: Optional[str] = Field(None, description="Email address of the user")
-    ssh_public_key: Optional[str] = Field(None, alias='sshPublicKey', description="SSH public key for resource access")
+    
+    # Vecchio campo per singola chiave (mantenuto per sicurezza)
+    ssh_public_key: Optional[str] = Field(None, alias='sshPublicKey', description="Single SSH public key")
+    
+    # --- NUOVI CAMPI FRONTEND ---
+    operating_system: Optional[str] = Field(None, alias='operatingSystem', description="OS slug chosen by user")
+    ssh_keys: Optional[List[str]] = Field(default_factory=list, alias='sshKeys', description="List of SSH public keys")
+    # ----------------------------
+
     event_title: Optional[str] = Field(None, alias='eventTitle', description="Title of the reservation event")
     event_description: Optional[str] = Field(None, alias='eventDescription', description="Description of the event")
     event_start: str = Field(..., alias='eventStart', description="Start time of the event")
@@ -34,7 +43,6 @@ class WebhookPayload(BaseModel):
     resource_location: Optional[str] = Field(None, alias='resourceLocation', description="Location of the resource")
     site_id: Optional[str] = Field(None, alias='siteId', description="Identifier of the site")
     site_name: Optional[str] = Field(None, alias='siteName', description="Name of the site")
-
 
 class EventResourceInfo(BaseModel):
     """Model for resource information within EVENT_DELETED data."""
