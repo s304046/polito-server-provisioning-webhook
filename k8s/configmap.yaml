@@ -9,38 +9,16 @@ data:
   BMH_API_VERSION: "v1alpha1"
   BMH_PLURAL: "baremetalhosts"
   
-  # --- CONFIGURAZIONE IMMAGINI (Nuova Logica Multi-OS) ---
-  # Ubuntu (Default)
-  IMG_UBUNTU: "http://192.168.11.24/images/noble-ubuntu-server-nvidia.qcow2"
-  CHK_UBUNTU: "http://192.168.11.24/images/noble-ubuntu-server-nvidia.qcow2.sha256"
-  
-  # Debian
-  IMG_DEBIAN: "http://192.168.11.24/images/debian-12-generic-amd64.qcow2"
-  CHK_DEBIAN: "http://192.168.11.24/images/debian-12-generic-amd64.qcow2.sha256"
-  
-  # Rocky Linux
-  IMG_ROCKY: "http://192.168.11.24/images/Rocky-9-GenericCloud.latest.x86_64.qcow2"
-  CHK_ROCKY: "http://192.168.11.24/images/Rocky-9-GenericCloud.latest.x86_64.qcow2.sha256"
-  
-  # Fedora
-  IMG_FEDORA: "http://192.168.11.24/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
-  CHK_FEDORA: "http://192.168.11.24/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2.sha256"
-  
-  # Fallback e parametri comuni
-  PROVISION_IMAGE: "http://192.168.11.24/images/noble-ubuntu-server-nvidia.qcow2"
-  PROVISION_CHECKSUM: "http://192.168.11.24/images/noble-ubuntu-server-nvidia.qcow2.sha256"
-  PROVISION_CHECKSUM_TYPE: "sha256"
-  
+  # --- Parametri Infrastruttura ---
   PROVISIONING_TIMEOUT: "3600"
-  DEPROVISION_IMAGE: ""
   LOG_LEVEL: "INFO"
   DISABLE_HEALTHZ_LOGS: "true"
 
-  # Notification configuration
-  # ATTENZIONE: Assicurati che questi endpoint siano raggiungibili dal cluster di collaudo
+  # --- Notifiche ---
   NOTIFICATION_ENDPOINT: "http://127.0.0.1/api/notifications/webhook"
   NOTIFICATION_TIMEOUT: "5"
-
-  # Webhook log configuration  
   WEBHOOK_LOG_ENDPOINT: "http://127.0.0.1/api/webhooks/log"
   WEBHOOK_LOG_TIMEOUT: "5"
+  
+  # NOTA: NESSUNA IMMAGINE QUI.
+  # Le immagini devono essere fornite dinamicamente dal Frontend.

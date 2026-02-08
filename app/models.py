@@ -1,48 +1,59 @@
 """
-Pydantic models for switch port webhook payload validation.
+Pydantic models for Server webhook payload validation.
 
 This module defines the data models used for validating incoming webhook payloads.
-Only handles Switch Port resource types.
+STRICT MODE: Only accepts Dynamic Image Provisioning (URL-based).
+Static OS slug mapping has been removed.
 """
 from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
 
-
 class WebhookPayload(BaseModel):
     """
-    Model for webhook event payload.
-    Handles a single Server event with multi-OS and multi-SSH key support.
+    Model for webhook event payload (EVENT_START / EVENT_END).
+    Handles a single Server event with multi-SSH key support.
+    STRICT MODE: Requires explicit imageUrl and checksumUrl for provisioning.
     """
+    # --- Identificatori Evento ---
     event_type: str = Field(..., alias='eventType', description="Type of the event (EVENT_START, EVENT_END)")
     timestamp: str = Field(..., description="Timestamp when the event occurred")
     event_id: str = Field(..., alias='eventId', description="Unique identifier for the event")
     webhook_id: int = Field(..., alias='webhookId', description="Unique identifier for the webhook")
+    
+    # --- Dati Utente ---
     user_id: Optional[str] = Field(None, alias='userId', description="ID of the user associated with the event")
     username: Optional[str] = Field(None, description="Username of the user")
     email: Optional[str] = Field(None, description="Email address of the user")
     
-    # Vecchio campo per singola chiave (mantenuto per sicurezza)
-    ssh_public_key: Optional[str] = Field(None, alias='sshPublicKey', description="Single SSH public key")
-    
-    # --- NUOVI CAMPI FRONTEND ---
-    operating_system: Optional[str] = Field(None, alias='operatingSystem', description="OS slug chosen by user")
+    # --- Gestione Accessi (SSH) ---
+    # Accettiamo solo la lista di chiavi. Il campo singolo obsoleto è stato rimosso.
     ssh_keys: Optional[List[str]] = Field(default_factory=list, alias='sshKeys', description="List of SSH public keys")
-    # ----------------------------
+    
+    # --- LOGICA PROVISIONING (Dynamic Only) ---
+    # Non esiste più 'operating_system'. Il Frontend DEVE mandare l'URL.
+    image_url: Optional[str] = Field(None, alias='imageUrl', description="Direct HTTP URL of the ISO image")
+    checksum_url: Optional[str] = Field(None, alias='checksumUrl', description="Direct HTTP URL of the SHA256 checksum")
+    image_format: Optional[str] = Field("raw", alias='imageFormat', description="Image format (raw/iso). Defaults to 'raw'.")
 
+    # --- Dettagli Evento e Risorsa ---
     event_title: Optional[str] = Field(None, alias='eventTitle', description="Title of the reservation event")
     event_description: Optional[str] = Field(None, alias='eventDescription', description="Description of the event")
     event_start: str = Field(..., alias='eventStart', description="Start time of the event")
     event_end: str = Field(..., alias='eventEnd', description="End time of the event")
+    
     custom_parameters: Optional[str] = Field(None, alias='customParameters', description="JSON serialized string of custom parameters")
+    
     resource_id: int = Field(..., alias='resourceId', description="Identifier of the resource")
-    resource_name: str = Field(..., alias='resourceName', description="Name of the resource")
+    resource_name: str = Field(..., alias='resourceName', description="Name of the resource (BareMetalHost name)")
     resource_type: str = Field(..., alias='resourceType', description="Type of the resource - must be 'Server'")
     resource_specs: Optional[str] = Field(None, alias='resourceSpecs', description="Specifications of the resource")
     resource_location: Optional[str] = Field(None, alias='resourceLocation', description="Location of the resource")
+    
     site_id: Optional[str] = Field(None, alias='siteId', description="Identifier of the site")
     site_name: Optional[str] = Field(None, alias='siteName', description="Name of the site")
+
 
 class EventResourceInfo(BaseModel):
     """Model for resource information within EVENT_DELETED data."""
@@ -50,6 +61,7 @@ class EventResourceInfo(BaseModel):
     id: int = Field(..., description="Unique identifier for the resource")
     specs: Optional[str] = Field(None, alias='specs', description="Specifications of the resource")
     location: Optional[str] = Field(None, alias='location', description="Location of the resource")
+
 
 class EventData(BaseModel):
     """Model for the 'data' field in an EVENT_DELETED payload."""

@@ -171,7 +171,8 @@ class BareMetalHostManager:
         image_url: str, 
         bmh_name: str,
         checksum: Optional[str] = None, 
-        checksum_type: Optional[str] = None
+        checksum_type: Optional[str] = None,
+        image_format: str = "raw"  # NUOVO PARAMETRO
     ) -> dict:
         """
         Create a patch for provisioning a BareMetalHost.
@@ -180,16 +181,19 @@ class BareMetalHostManager:
             image_url: URL of the image to provision
             checksum: Image checksum
             checksum_type: Type of checksum (e.g., 'sha256')
+            image_format: Format of the image (raw or iso)
             
         Returns:
             Patch dictionary for provisioning
         """
         return {
             "spec": {
+                "online": True, # Ensure the host is powered on
                 "image": {
                     "url": image_url,
                     "checksum": checksum,
-                    "checksumType": checksum_type
+                    "checksumType": checksum_type,
+                    "format": image_format  # INSERITO QUI
                 },
                 "userData": {
                     "name": f"{bmh_name}-userdata",
@@ -207,6 +211,7 @@ class BareMetalHostManager:
         """
         return {
             "spec": {
+                "online": False, # Power off during deprovisioning
                 "image": None,
                 "userData": None
             }
@@ -264,6 +269,7 @@ class BareMetalHostManager:
         ssh_keys: Optional[Union[str, List[str]]] = None,
         checksum: Optional[str] = None, 
         checksum_type: Optional[str] = None,
+        image_format: str = "raw",  # NUOVO PARAMETRO
         wait_for_completion: bool = False,
         webhook_id: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -279,6 +285,7 @@ class BareMetalHostManager:
             ssh_keys: SSH public key(s) for user access
             checksum: Image checksum
             checksum_type: Type of checksum
+            image_format: Format of the image (raw or iso)
             wait_for_completion: Not used, kept for API compatibility
             webhook_id: Webhook identifier for asynchronous notifications
             user_id: User identifier for asynchronous notifications
@@ -295,7 +302,9 @@ class BareMetalHostManager:
                 return False
         
         # Create and apply provision patch
-        patch = self._create_provision_patch(image_url, bmh_name, checksum, checksum_type)
+        patch = self._create_provision_patch(
+            image_url, bmh_name, checksum, checksum_type, image_format # PASSAGGIO DEL FORMATO
+        )
         success = self._apply_patch(bmh_name, patch, "provision")
         
         # If provisioning was successful and we have webhook parameters, start async monitoring
@@ -568,13 +577,9 @@ class ProvisioningMonitor:
             
             if not notification_sent:
                 logger.warning(f"Failed to send notification for resource '{resource_name}'")
-            else:
-                logger.debug(f"Successfully sent notification for resource '{resource_name}' (success: {success})")
-                
+            
             if not webhook_log_sent:
                 logger.warning(f"Failed to send webhook log for resource '{resource_name}'")
-            else:
-                logger.debug(f"Successfully sent webhook log for resource '{resource_name}' (success: {success})")
                 
         except Exception as e:
             logger.error(f"Error sending notification/webhook log for resource '{resource_name}': {str(e)}")
@@ -591,6 +596,7 @@ def patch_baremetalhost(
     ssh_keys: Optional[Union[str, List[str]]] = None, # Changed arg name from ssh_key to ssh_keys
     checksum: Optional[str] = None, 
     checksum_type: Optional[str] = None,
+    image_format: str = "raw",  # NUOVO PARAMETRO
     wait_for_completion: bool = False,
     webhook_id: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -608,6 +614,7 @@ def patch_baremetalhost(
         ssh_keys: SSH public key(s) for user access
         checksum: Image checksum
         checksum_type: Type of checksum
+        image_format: Format of the image (raw or iso)
         wait_for_completion: Whether to wait for provisioning to complete
         webhook_id: Webhook identifier for asynchronous notifications
         user_id: User identifier for asynchronous notifications
@@ -620,6 +627,7 @@ def patch_baremetalhost(
     if image_url:
         return _bmh_manager.provision(
             bmh_name, image_url, ssh_keys, checksum, checksum_type, 
+            image_format, # PASSAGGIO DEL PARAMETRO AL MANAGER
             wait_for_completion, webhook_id, user_id, event_id, timeout
         )
     else:
