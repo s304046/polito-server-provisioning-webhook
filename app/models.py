@@ -31,11 +31,11 @@ class WebhookPayload(BaseModel):
     # Accettiamo solo la lista di chiavi. Il campo singolo obsoleto è stato rimosso.
     ssh_keys: Optional[List[str]] = Field(default_factory=list, alias='sshKeys', description="List of SSH public keys")
     
-    # --- LOGICA PROVISIONING (Dynamic Only) ---
-    # Non esiste più 'operating_system'. Il Frontend DEVE mandare l'URL.
-    image_url: Optional[str] = Field(None, alias='imageUrl', description="Direct HTTP URL of the ISO image")
-    checksum_url: Optional[str] = Field(None, alias='checksumUrl', description="Direct HTTP URL of the SHA256 checksum")
-    image_format: Optional[str] = Field("raw", alias='imageFormat', description="Image format (raw/iso). Defaults to 'raw'.")
+    
+    # --- LOGICA PROVISIONING: CAMBIAMENTI QUI ---
+    image_url: Optional[str] = Field(None, alias='imageUrl')
+    checksum_url: Optional[str] = Field(None, alias='checksumUrl')
+    image_format: Optional[str] = Field(None, alias='imageFormat')
 
     # --- Dettagli Evento e Risorsa ---
     event_title: Optional[str] = Field(None, alias='eventTitle', description="Title of the reservation event")
@@ -53,6 +53,10 @@ class WebhookPayload(BaseModel):
     
     site_id: Optional[str] = Field(None, alias='siteId', description="Identifier of the site")
     site_name: Optional[str] = Field(None, alias='siteName', description="Name of the site")
+
+    class Config:
+        populate_by_name = True  # Permette image_url = data['imageUrl']
+        from_attributes = True   # Utile per compatibilità versioni Pydantic
 
 
 class EventResourceInfo(BaseModel):
