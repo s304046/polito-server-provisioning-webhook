@@ -137,11 +137,27 @@ def handle_provision_event(
         # 2. Extract Data (No Magic)
         image_url = payload.image_url
         checksum = payload.checksum_url
-        image_format = payload.image_format or "raw"
+        
+        # --- LOGICA DI PARSING DINAMICO DEL FORMATO ---
+        # Verifichiamo l'estensione dell'URL per impostare il formato corretto
+        url_lower = image_url.lower()
+        if url_lower.endswith('.qcow2'):
+            detected_format = "qcow2"
+        elif url_lower.endswith('.vmdk'):
+            detected_format = "vmdk"
+        elif url_lower.endswith('.iso'):
+            detected_format = "iso"
+        else:
+            detected_format = "raw"  # Default per .img, .bin o se l'estensione manca
+
+        # Priorità: Formato esplicito dal Frontend > Formato detectato dall'URL
+        image_format = payload.image_format if payload.image_format else detected_format
+        # ----------------------------------------------
+
         ssh_keys_list = payload.ssh_keys if payload.ssh_keys else []
         
-        # Checkpoint log
-        logger.info(f"Provisioning '{resource_name}' with explicit URL: {image_url} (Format: {image_format})")
+        # Checkpoint log con il formato rilevato
+        logger.info(f"Provisioning '{resource_name}' with explicit URL: {image_url} (Detected Format: {image_format})")
 
         if not ssh_keys_list:
             logger.warning(f"No SSH keys provided for {resource_name}. Access might be restricted.")
