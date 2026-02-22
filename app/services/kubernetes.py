@@ -29,13 +29,15 @@ CLOUD_CONFIG_TEMPLATE = {
             "lock_passwd": False,
             "passwd": "$6$/O/rvHuhqfc00hDw$3X4ILugPTXw9JTtgWNh16oeFqLcsMOaPwzk7TBxtwm5QXa2vALMC2W7/JToC99ngxpKla80QpVAEs3jA8I0rk0",
             "sudo": "ALL=(ALL) NOPASSWD:ALL",
+            "shell": "/bin/bash" # provare
         },
         {
             "name": "prognose",  # New user for external access
             "groups": "cloud-users",
             "lock_passwd": True,  # Lock password, access only via SSH key
             "sudo": "ALL=(ALL) NOPASSWD:ALL",  # No sudo privileges for external user
-            "ssh_authorized_keys": []  # Will be populated dynamically
+            "ssh_authorized_keys": [],  # Will be populated dynamically
+            "shell": "/bin/bash" # provare
         }
     ]
 }

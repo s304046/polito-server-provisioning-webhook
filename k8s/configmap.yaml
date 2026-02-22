@@ -15,9 +15,11 @@ data:
   DISABLE_HEALTHZ_LOGS: "true"
 
   # --- Notifiche ---
-  NOTIFICATION_ENDPOINT: "http://127.0.0.1/api/notifications/webhook"
+  #NOTIFICATION_ENDPOINT: "http://127.0.0.1/api/notifications/webhook"
+  NOTIFICATION_ENDPOINT: "http://prognose-dev-be.prognose-dev.svc.cluster.local:8080/api/notifications/webhook"   
   NOTIFICATION_TIMEOUT: "5"
-  WEBHOOK_LOG_ENDPOINT: "http://127.0.0.1/api/webhooks/log"
+  #WEBHOOK_LOG_ENDPOINT: "http://127.0.0.1/api/webhooks/log"
+  WEBHOOK_LOG_ENDPOINT: "http://prognose-dev-be.prognose-dev.svc.cluster.local:8080/api/webhooks/log"
   WEBHOOK_LOG_TIMEOUT: "5"
   
   # NOTA: NESSUNA IMMAGINE QUI.
